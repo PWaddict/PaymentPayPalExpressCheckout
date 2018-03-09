@@ -1,11 +1,11 @@
 <?php namespace ProcessWire;
 
 /**
- * 
+ *
  * ProcessWire
- * Copyright (C) 2014 by Ryan Cramer 
+ * Copyright (C) 2014 by Ryan Cramer
  * Licensed under GNU/GPL v2, see LICENSE.TXT
- * 
+ *
  * http://processwire.com
  *
  */
@@ -14,11 +14,11 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 
 	public static function getModuleInfo() {
 		return array(
-			'title' => 'PayPal Express Checkout', 
+			'title' => 'PayPal Express Checkout',
 			'version' => '1.0.0',
 			'summary' => 'PayPal Express Checkout module using the REST API',
 			'singular' => false,
-			'autoload' => false, 
+			'autoload' => false,
 			'requires' => 'PaymentModule',
 			'author' => 'PWaddict'
 		);
@@ -50,85 +50,88 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	public function render() {
 		if ($this->getTotalAmount() <= 0) throw new WireException("Products are not set");
 		if ($this->processUrl == '') throw new WireException("processUrl is not set");
-		
+
 		$out = "";
 		$out .= "<script src='https://www.paypalobjects.com/api/checkout.min.js'></script>
-		
+
 		<div id='paypal-button-container'></div><form id='{$this->formId}' action='{$this->processUrl}' method='POST'></form>
-		
+
 		<script>
 		paypal.Button.render({
 
-            env: '{$this->enviroment}',
+			env: '{$this->enviroment}',
 
-            // PayPal Client ID
-            client: {
-			{$this->enviroment}: '{$this->clientId}'
+			// PayPal Client ID
+			client: {
+				{$this->enviroment}: '{$this->clientId}'
 			},
 
-            // Specify the language displayed on your button
+			// Specify the language displayed on your button
 			locale: '{$this->locale}',
-			
+
 			// Customize the button
 			style: {
-            size: '{$this->size}',
-			color: '{$this->color}',
-            shape: '{$this->shape}',
-			label: '{$this->label}',
-			tagline: {$this->tagline},
-			fundingicons: {$this->fundingicons}
+				size: '{$this->size}',
+				color: '{$this->color}',
+				shape: '{$this->shape}',
+				label: '{$this->label}',
+				tagline: {$this->tagline},
+				fundingicons: {$this->fundingicons}
 			},
-						
+
 			// Show the buyer a 'Pay Now' button in the checkout flow
-            commit: true,
-			
-            // payment() is called when the button is clicked
-            payment: function(data, actions) {
-			
-			// Make a call to the REST api to create the payment
-			return actions.payment.create({
-                    payment: {
+			commit: true,
+
+			// payment() is called when the button is clicked
+			payment: function(data, actions) {
+
+				// Make a call to the REST api to create the payment
+				return actions.payment.create({
+					payment: {
 						transactions: [
-                            {
-                                amount: {
-								   total: '{$this->calculateAmount()}',
-								   currency: '{$this->currency}',
+							{
+								amount: {
+									total: '{$this->calculateAmount()}',
+									currency: '{$this->currency}',
 								},
 								item_list: {
-								   items: [";
-		                              foreach($this->products as $p) {
-									  $amount = $p->amount / 100;
-									  $out .= "{
-								      name: '{$p->title}',
-									  quantity: {$p->quantity},
-									  price: '{$amount}',
-									  currency: '{$this->currency}'
-									  },";
-								   }
-		                           $out .= "]
+									items: [";
+									foreach($this->products as $p) {
+										$amount = $p->amount / 100;
+										$out .= "{
+											name: '{$p->title}',
+											quantity: {$p->quantity},
+											price: '{$amount}',
+											currency: '{$this->currency}'
+										},";
+									}
+
+									$out .= "]
 								},
 								invoice_number: '{$this->id}'
-                            }
-                        ]
-                    }
-                });
-            },
+							}
+						]
+					}
+				});
 
-            // onAuthorize() is called when the buyer approves the payment
-            onAuthorize: function(data, actions) {
+			},
 
-                // Make a call to the REST api to execute the payment
-                return actions.payment.execute().then(function() {
-								
-                  // Submit form
-				  var form = document.getElementById('{$this->formId}');
-				  form.insertAdjacentHTML('beforeend', '{$this->notificationHTML}');
-				  
-				  form.submit();
-                });
-            }
+			// onAuthorize() is called when the buyer approves the payment
+			onAuthorize: function(data, actions) {
 
-        }, '#paypal-button-container');
+				// Make a call to the REST api to execute the payment
+				return actions.payment.execute().then(function() {
+
+					// Submit form
+					var form = document.getElementById('{$this->formId}');
+					form.insertAdjacentHTML('beforeend', '{$this->notificationHTML}');
+					form.submit();
+
+				});
+
+			}
+
+		}, '#paypal-button-container');
 		</script>";
 
 		return $out;
@@ -180,7 +183,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->addOption('production', __('Live'));
 		$f->value = isset($data['enviroment']) ? $data['enviroment'] : 'sandbox';
 		$requiredFields->add($f);
-		
+
 		$f = $modules->get('InputfieldText');
 		$f->name = 'clientId';
 		$f->label = __("Client ID (Sandbox or Live)");
@@ -205,7 +208,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->addOption('responsive', __('Responsive'));
 		$f->value = isset($data['size']) ? $data['size'] : 'small';
 		$optionalFields->add($f);
-		
+
 		$f = $modules->get('InputfieldRadios');
 		$f->name = 'color';
 		$f->label = __('Button Color');
@@ -216,7 +219,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->addOption('black', __('Black'));
 		$f->value = isset($data['color']) ? $data['color'] : 'gold';
 		$optionalFields->add($f);
-		
+
 		$f = $modules->get('InputfieldRadios');
 		$f->name = 'shape';
 		$f->label = __('Button Shape');
@@ -225,7 +228,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->addOption('rect', __('Rect'));
 		$f->value = isset($data['shape']) ? $data['shape'] : 'pill';
 		$optionalFields->add($f);
-		
+
 		$f = $modules->get('InputfieldRadios');
 		$f->name = 'label';
 		$f->label = __('Button Label');
@@ -235,7 +238,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->addOption('generic', __('Generic'));
 		$f->value = isset($data['label']) ? $data['label'] : 'checkout';
 		$optionalFields->add($f);
-		
+
 		$f = $modules->get('InputfieldRadios');
 		$f->name = 'tagline';
 		$f->label = __('Button Tagline');
@@ -244,7 +247,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->addOption('false', __('Disable'));
 		$f->value = isset($data['tagline']) ? $data['tagline'] : 'false';
 		$optionalFields->add($f);
-		
+
 		$f = $modules->get('InputfieldRadios');
 		$f->name = 'fundingicons';
 		$f->label = __('Button Funding Icons');
@@ -253,7 +256,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->addOption('false', __('Disable'));
 		$f->value = isset($data['fundingicons']) ? $data['fundingicons'] : 'false';
 		$optionalFields->add($f);
-		
+
 		$f = $modules->get('InputfieldTextarea');
 		$f->name = 'notificationHTML';
 		$f->label = __("Processing Notification HTML");
