@@ -15,8 +15,8 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'PayPal Express Checkout',
-			'version' => '1.0.0',
-			'summary' => 'PayPal Express Checkout module using the REST API',
+			'version' => '1.1.0',
+			'summary' => 'PayPal Express Checkout module using the Client-Side REST API.',
 			'singular' => false,
 			'autoload' => false,
 			'requires' => 'PaymentModule',
@@ -24,9 +24,10 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		);
 	}
 
-	static public function getDefaults() {
+	static public function getDefaultData() {
 		return array(
 			"formId" => "checkout-form",
+			"loadingHTML" => "",
 			"notificationHTML" => ""
 		);
 	}
@@ -44,55 +45,67 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	}
 
 	public function processPayment() {
-		return true;
+		if ($_POST['payment_state'] == 'approved') {
+			return true;
+		}
+		return false;
 	}
 
 	public function render() {
 		if ($this->getTotalAmount() <= 0) throw new WireException("Products are not set");
 		if ($this->processUrl == '') throw new WireException("processUrl is not set");
 
+		if ($this->wire('languages')) {
+			$userLanguage = $this->wire('user')->language;
+			$lang = $userLanguage->isDefault() ? '' : "__$userLanguage->id";
+		}
+		else {
+			$lang = '';
+		}
+
 		$out = "";
 		$out .= "<script src='https://www.paypalobjects.com/api/checkout.min.js'></script>
 
-		<div id='paypal-button-container'></div><form id='{$this->formId}' action='{$this->processUrl}' method='POST'></form>
+		<div id='paypal-button-loading'>" . ($this->data['loadingHTML' . $lang] ? $this->data['loadingHTML' . $lang] : $this->data['loadingHTML']) . "</div>
+		<div id='paypal-button-container'></div>
+		<div id='paypal-button-notification'>" . ($this->data['notificationHTML' . $lang] ? $this->data['notificationHTML' . $lang] : $this->data['notificationHTML']) . "</div>
+
+		<form id='{$this->formId}' action='{$this->processUrl}' method='POST'></form>
 
 		<script>
+		document.querySelector('#paypal-button-loading').style.display = 'block';
+		document.querySelector('#paypal-button-container').style.display = 'none';
+		document.querySelector('#paypal-button-notification').style.display = 'none';
+
 		paypal.Button.render({
 
 			env: '{$this->enviroment}',
 
-			// PayPal Client ID
 			client: {
-				{$this->enviroment}: '{$this->clientId}'
+				sandbox: '{$this->clientIdSandbox}',
+				production: '{$this->clientIdLive}'
 			},
 
-			// Specify the language displayed on your button
-			locale: '{$this->locale}',
+			locale: '" . ($this->data['locale' . $lang] ? $this->data['locale' . $lang] : $this->data['locale']) . "',
 
-			// Customize the button
 			style: {
+				layout: 'vertical',
 				size: '{$this->size}',
 				color: '{$this->color}',
-				shape: '{$this->shape}',
-				label: '{$this->label}',
-				tagline: {$this->tagline},
-				fundingicons: {$this->fundingicons}
+				shape: '{$this->shape}'
 			},
 
-			// Show the buyer a 'Pay Now' button in the checkout flow
 			commit: true,
 
-			// payment() is called when the button is clicked
 			payment: function(data, actions) {
 
-				// Make a call to the REST api to create the payment
 				return actions.payment.create({
 					payment: {
 						transactions: [
 							{
 								amount: {
 									total: '{$this->calculateAmount()}',
-									currency: '{$this->currency}',
+									currency: '" . ($this->data['currency' . $lang] ? $this->data['currency' . $lang] : $this->data['currency']) . "',
 								},
 								item_list: {
 									items: [";
@@ -102,7 +115,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 											name: '{$p->title}',
 											quantity: {$p->quantity},
 											price: '{$amount}',
-											currency: '{$this->currency}'
+											currency: '" . ($this->data['currency' . $lang] ? $this->data['currency' . $lang] : $this->data['currency']) . "'
 										},";
 									}
 
@@ -116,19 +129,30 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 
 			},
 
-			// onAuthorize() is called when the buyer approves the payment
 			onAuthorize: function(data, actions) {
 
-				// Make a call to the REST api to execute the payment
-				return actions.payment.execute().then(function() {
+				return actions.payment.execute().then(function(response) {
 
-					// Submit form
+					document.querySelector('#paypal-button-container').style.display = 'none';
+					document.querySelector('#paypal-button-notification').style.display = 'block';
+
 					var form = document.getElementById('{$this->formId}');
-					form.insertAdjacentHTML('beforeend', '{$this->notificationHTML}');
+
+					input = document.createElement('input');
+					input.setAttribute('type', 'hidden');
+					input.setAttribute('name', 'payment_state');
+					input.setAttribute('value', response.state);
+
+					form.appendChild(input);
 					form.submit();
 
 				});
 
+			},
+
+			onEnter: function() {
+				document.querySelector('#paypal-button-loading').style.display = 'none';
+				document.querySelector('#paypal-button-container').style.display = 'block';
 			}
 
 		}, '#paypal-button-container');
@@ -138,7 +162,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	}
 
 	public static function getModuleConfigInputfields(array $data) {
-		$data = array_merge(self::getDefaults(), $data);
+		$data = array_merge(self::getDefaultData(), $data);
 		$inputfields = new InputfieldWrapper();
 		$modules = wire('modules');
 
@@ -148,7 +172,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f = $modules->get('InputfieldText');
 		$f->name = 'formId';
 		$f->label = __("Form ID");
-		$f->description = __("ID attached to dynamically generated form element");
+		$f->description = __("ID attached to dynamically generated form element.");
 		$f->required = 1;
 		$f->columnWidth = 33;
 		if(isset($data['formId'])) $f->value = $data['formId'];
@@ -156,11 +180,12 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 
 		$f = $modules->get('InputfieldText');
 		$f->name = 'currency';
-		$f->label = __("Default currency");
-		$f->description = __("Use this currency by default.");
-		$f->notes = __("E.g. USD or EUR etc. All supported codes are listed [here](https://developer.paypal.com/docs/classic/api/currency_codes/). Always possible to overwrite when using this module from API.");
+		$f->label = __("Currency");
+		$f->description = __("Add the currency code for the transactions.");
+		$f->notes = __("E.g. USD or EUR etc. All supported codes are listed [here](https://developer.paypal.com/docs/classic/api/currency_codes/).");
 		$f->required = 1;
 		$f->columnWidth = 34;
+		$f->useLanguages = true;
 		if(isset($data['currency'])) $f->value = $data['currency'];
 		$requiredFields->add($f);
 
@@ -169,8 +194,9 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->label = __("Locale");
 		$f->required = 1;
 		$f->columnWidth = 33;
-		$f->description = __("Localize the PayPal button and checkout flow.");
+		$f->description = __("Localize the checkout flow.");
 		$f->notes = __("E.g. en_US or en_GB or es_ES etc. All supported codes are listed [here](https://developer.paypal.com/docs/classic/api/locale_codes/).");
+		$f->useLanguages = true;
 		if(isset($data['locale'])) $f->value = $data['locale'];
 		$requiredFields->add($f);
 
@@ -185,12 +211,21 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$requiredFields->add($f);
 
 		$f = $modules->get('InputfieldText');
-		$f->name = 'clientId';
-		$f->label = __("Client ID (Sandbox or Live)");
-		$f->notes = __("Get your Sandbox / Live Client ID by creating a REST API app [here](https://developer.paypal.com/developer/applications/create).");
+		$f->name = 'clientIdSandbox';
+		$f->label = __("Sandbox Client ID");
+		$f->notes = __("Get your Sandbox Client ID by creating a REST API app [here](https://developer.paypal.com/developer/applications/create).");
 		$f->required = 1;
-		$f->columnWidth = 80;
-		if(isset($data['clientId'])) $f->value = $data['clientId'];
+		$f->columnWidth = 40;
+		if(isset($data['clientIdSandbox'])) $f->value = $data['clientIdSandbox'];
+		$requiredFields->add($f);
+
+		$f = $modules->get('InputfieldText');
+		$f->name = 'clientIdLive';
+		$f->label = __("Live Client ID");
+		$f->notes = __("Get your Live Client ID by creating a REST API app [here](https://developer.paypal.com/developer/applications/create).");
+		$f->required = 1;
+		$f->columnWidth = 40;
+		if(isset($data['clientIdLive'])) $f->value = $data['clientIdLive'];
 		$requiredFields->add($f);
 
 		$inputfields->add($requiredFields);
@@ -202,11 +237,10 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->name = 'size';
 		$f->label = __('Button Size');
 		$f->columnWidth = 33;
-		$f->addOption('small', __('Small'));
 		$f->addOption('medium', __('Medium'));
 		$f->addOption('large', __('Large'));
 		$f->addOption('responsive', __('Responsive'));
-		$f->value = isset($data['size']) ? $data['size'] : 'small';
+		$f->value = isset($data['size']) ? $data['size'] : 'responsive';
 		$optionalFields->add($f);
 
 		$f = $modules->get('InputfieldRadios');
@@ -226,42 +260,24 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->columnWidth = 33;
 		$f->addOption('pill', __('Pill'));
 		$f->addOption('rect', __('Rect'));
-		$f->value = isset($data['shape']) ? $data['shape'] : 'pill';
+		$f->value = isset($data['shape']) ? $data['shape'] : 'rect';
 		$optionalFields->add($f);
 
-		$f = $modules->get('InputfieldRadios');
-		$f->name = 'label';
-		$f->label = __('Button Label');
-		$f->columnWidth = 33;
-		$f->addOption('checkout', __('Checkout'));
-		$f->addOption('pay', __('Pay'));
-		$f->addOption('generic', __('Generic'));
-		$f->value = isset($data['label']) ? $data['label'] : 'checkout';
-		$optionalFields->add($f);
-
-		$f = $modules->get('InputfieldRadios');
-		$f->name = 'tagline';
-		$f->label = __('Button Tagline');
-		$f->columnWidth = 34;
-		$f->addOption('true', __('Enable'));
-		$f->addOption('false', __('Disable'));
-		$f->value = isset($data['tagline']) ? $data['tagline'] : 'false';
-		$optionalFields->add($f);
-
-		$f = $modules->get('InputfieldRadios');
-		$f->name = 'fundingicons';
-		$f->label = __('Button Funding Icons');
-		$f->columnWidth = 33;
-		$f->addOption('true', __('Enable'));
-		$f->addOption('false', __('Disable'));
-		$f->value = isset($data['fundingicons']) ? $data['fundingicons'] : 'false';
+		$f = $modules->get('InputfieldTextarea');
+		$f->name = 'loadingHTML';
+		$f->label = __("Loading Buttons HTML");
+		$f->description = __("HTML added while the PayPal buttons are fully rendered and ready to be clicked.");
+		$f->columnWidth = 50;
+		$f->useLanguages = true;
+		if(isset($data['loadingHTML'])) $f->value = $data['loadingHTML'];
 		$optionalFields->add($f);
 
 		$f = $modules->get('InputfieldTextarea');
 		$f->name = 'notificationHTML';
 		$f->label = __("Processing Notification HTML");
 		$f->description = __("HTML added after the PayPal payment executed.");
-		$f->columnWidth = 100;
+		$f->columnWidth = 50;
+		$f->useLanguages = true;
 		if(isset($data['notificationHTML'])) $f->value = $data['notificationHTML'];
 		$optionalFields->add($f);
 
