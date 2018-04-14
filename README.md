@@ -9,6 +9,12 @@ ProcessWire payment method for PayPal Express Checkout using the Client-Side RES
 
 ## Changelog
 
+### 1.2.0 (15 April 2018)
+
+- Added AJAX support (Vanilla Javascript)
+- Converted querySelector to getElementById to improve performance
+- Added PayPal icon on Module info
+
 ### 1.1.0 (29 March 2018)
 
 - Added an additional payment verification for preventing exploitation by manually accessing the process url from the source code and getting digital content without actually paying
