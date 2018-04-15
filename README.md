@@ -9,6 +9,11 @@ ProcessWire payment method for PayPal Express Checkout using the Client-Side RES
 
 ## Changelog
 
+### 1.2.1 (15 April 2018)
+
+- Added failure translatable text
+- Remove form element when AJAX is enabled
+
 ### 1.2.0 (15 April 2018)
 
 - Added AJAX support (Vanilla Javascript)

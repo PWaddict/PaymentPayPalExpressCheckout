@@ -12,7 +12,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'PayPal Express Checkout',
-			'version' => '1.2.0',
+			'version' => '1.2.1',
 			'summary' => 'PayPal Express Checkout module using the Client-Side REST API.',
 			'singular' => false,
 			'autoload' => false,
@@ -44,6 +44,10 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		return $this->_("PayPal Express Checkout");
 	}
 
+	public function getFailureReason() {
+		return $this->_("There was something wrong with the payment.");
+	}
+
 	public function processPayment() {
 		if ($_POST['payment_state'] == 'approved') {
 			return true;
@@ -66,6 +70,8 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		if ($this->data['ajax']) {
 			$paypalScript = "";
 
+			$form = "";
+
 			$submit = "var xhr = new XMLHttpRequest();
 			xhr.open('POST', '{$this->processUrl}', true);
 
@@ -82,6 +88,8 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		}
 		else {
 			$paypalScript = "<script src='https://www.paypalobjects.com/api/checkout.min.js'></script>";
+
+			$form = "<form id='{$this->formId}' action='{$this->processUrl}' method='POST'></form>";
 
 			$submit = "var form = document.getElementById('{$this->formId}');
 
@@ -102,7 +110,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		<div id='paypal-button-container'></div>
 		<div id='paypal-button-notification'>" . ($this->data['notificationHTML' . $lang] ? $this->data['notificationHTML' . $lang] : $this->data['notificationHTML']) . "</div>
 
-		<form id='{$this->formId}' action='{$this->processUrl}' method='POST'></form>
+		{$form}
 
 		<script>
 		document.getElementById('paypal-button-loading').style.display = 'block';
@@ -306,13 +314,13 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$optionalFields->add($f);
 
 		$f = $modules->get('InputfieldCheckbox');
-    $f->attr('name+id', 'ajax');
-    $f->label = __('AJAX Checkout');
-    $f->description = __("IMPORTANT: Enable this option ONLY if your checkout process is already using AJAX in order to display the success page via AJAX too.");
+		$f->attr('name+id', 'ajax');
+		$f->label = __('AJAX Checkout');
+		$f->description = __("IMPORTANT: Enable this option ONLY if your checkout process is already using AJAX in order to display the success page via AJAX too.");
 		$f->notes = __("IMPORTANT: You have to manually include the PayPal Checkout script in your head or footer: <script src='https://www.paypalobjects.com/api/checkout.min.js'></script>");
-    $f->columnWidth = 50;
-    $f->attr('checked', isset($data['ajax']) && $data['ajax'] ? 'checked' : '' );
-    $optionalFields->add($f);
+		$f->columnWidth = 50;
+		$f->attr('checked', isset($data['ajax']) && $data['ajax'] ? 'checked' : '' );
+		$optionalFields->add($f);
 
 		$f = $modules->get('InputfieldText');
 		$f->name = 'ajaxId';
