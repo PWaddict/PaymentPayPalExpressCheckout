@@ -1,6 +1,6 @@
-# PayPal Express Checkout (Client-Side REST API) Module for ProcessWire 3.x
+# PayPal Checkout (Client-Side REST API) Module for ProcessWire 3.x
 
-ProcessWire payment method for PayPal Express Checkout using the Client-Side REST API.
+ProcessWire payment method for PayPal Checkout using the Client-Side REST API.
 
 ## Requirements
 
@@ -8,6 +8,12 @@ ProcessWire payment method for PayPal Express Checkout using the Client-Side RES
 - [PaymentModule](https://github.com/apeisa/PaymentModule/tree/PW3) (PW3 branch) ProcessWire module
 
 ## Changelog
+
+### 1.2.2 (24 October 2018)
+
+- Added ability to display custom HTML above and below the PayPal buttons after they are fully rendered and ready to be clicked
+- Changed title to PayPal Checkout
+- Updated notes for AJAX Checkout
 
 ### 1.2.1 (15 April 2018)
 

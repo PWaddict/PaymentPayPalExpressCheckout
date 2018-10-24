@@ -1,7 +1,7 @@
 <?php namespace ProcessWire;
 
 /**
- * PayPal Express Checkout Module
+ * PayPal Checkout Module
  * ProcessWire 3.x, Copyright 2018 by Ryan Cramer
  * https://processwire.com
  *
@@ -11,9 +11,9 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 
 	public static function getModuleInfo() {
 		return array(
-			'title' => 'PayPal Express Checkout',
-			'version' => '1.2.1',
-			'summary' => 'PayPal Express Checkout module using the Client-Side REST API.',
+			'title' => 'PayPal Checkout',
+			'version' => '1.2.2',
+			'summary' => 'PayPal Checkout module using the Client-Side REST API.',
 			'singular' => false,
 			'autoload' => false,
 			'requires' => 'PaymentModule',
@@ -27,6 +27,8 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 			"formId" => "checkout-form",
 			"loadingHTML" => "",
 			"notificationHTML" => "",
+			"aboveHTML" => "",
+			"belowHTML" => "",
 			"ajax" => 0,
 			"ajaxId" => ""
 		);
@@ -41,7 +43,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	}
 
 	public function getTitle() {
-		return $this->_("PayPal Express Checkout");
+		return $this->_("PayPal");
 	}
 
 	public function getFailureReason() {
@@ -107,15 +109,19 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$out .= "{$paypalScript}
 
 		<div id='paypal-button-loading'>" . ($this->data['loadingHTML' . $lang] ? $this->data['loadingHTML' . $lang] : $this->data['loadingHTML']) . "</div>
+		<div id='paypal-button-above'>" . ($this->data['aboveHTML' . $lang] ? $this->data['aboveHTML' . $lang] : $this->data['aboveHTML']) . "</div>
 		<div id='paypal-button-container'></div>
 		<div id='paypal-button-notification'>" . ($this->data['notificationHTML' . $lang] ? $this->data['notificationHTML' . $lang] : $this->data['notificationHTML']) . "</div>
+		<div id='paypal-button-below'>" . ($this->data['belowHTML' . $lang] ? $this->data['belowHTML' . $lang] : $this->data['belowHTML']) . "</div>
 
 		{$form}
 
 		<script>
 		document.getElementById('paypal-button-loading').style.display = 'block';
+		document.getElementById('paypal-button-above').style.display = 'none';
 		document.getElementById('paypal-button-container').style.display = 'none';
 		document.getElementById('paypal-button-notification').style.display = 'none';
+		document.getElementById('paypal-button-below').style.display = 'none';
 
 		paypal.Button.render({
 
@@ -173,8 +179,10 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 
 				return actions.payment.execute().then(function(response) {
 
+					document.getElementById('paypal-button-above').style.display = 'none';
 					document.getElementById('paypal-button-container').style.display = 'none';
 					document.getElementById('paypal-button-notification').style.display = 'block';
+					document.getElementById('paypal-button-below').style.display = 'none';
 
 					{$submit}
 
@@ -184,7 +192,9 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 
 			onEnter: function() {
 				document.getElementById('paypal-button-loading').style.display = 'none';
+				document.getElementById('paypal-button-above').style.display = 'block';
 				document.getElementById('paypal-button-container').style.display = 'block';
+				document.getElementById('paypal-button-below').style.display = 'block';
 			}
 
 		}, '#paypal-button-container');
@@ -313,11 +323,29 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		if(isset($data['notificationHTML'])) $f->value = $data['notificationHTML'];
 		$optionalFields->add($f);
 
+		$f = $modules->get('InputfieldTextarea');
+		$f->name = 'aboveHTML';
+		$f->label = __("Above PayPal Buttons HTML");
+		$f->description = __("HTML added above PayPal buttons after they are fully rendered and ready to be clicked.");
+		$f->columnWidth = 50;
+		$f->useLanguages = true;
+		if(isset($data['aboveHTML'])) $f->value = $data['aboveHTML'];
+		$optionalFields->add($f);
+
+		$f = $modules->get('InputfieldTextarea');
+		$f->name = 'belowHTML';
+		$f->label = __("Below PayPal Buttons HTML");
+		$f->description = __("HTML added below PayPal buttons after they are fully rendered and ready to be clicked.");
+		$f->columnWidth = 50;
+		$f->useLanguages = true;
+		if(isset($data['belowHTML'])) $f->value = $data['belowHTML'];
+		$optionalFields->add($f);
+
 		$f = $modules->get('InputfieldCheckbox');
 		$f->attr('name+id', 'ajax');
 		$f->label = __('AJAX Checkout');
 		$f->description = __("IMPORTANT: Enable this option ONLY if your checkout process is already using AJAX in order to display the success page via AJAX too.");
-		$f->notes = __("IMPORTANT: You have to manually include the PayPal Checkout script in your head or footer: <script src='https://www.paypalobjects.com/api/checkout.min.js'></script>");
+		$f->notes = __("IMPORTANT: You have to manually include the below PayPal Checkout script in your template's <head> or above </body> section: <script src='https://www.paypalobjects.com/api/checkout.min.js' async></script>");
 		$f->columnWidth = 50;
 		$f->attr('checked', isset($data['ajax']) && $data['ajax'] ? 'checked' : '' );
 		$optionalFields->add($f);
