@@ -12,7 +12,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'PayPal Checkout',
-			'version' => '1.2.2',
+			'version' => '1.2.3',
 			'summary' => 'PayPal Checkout module using the Client-Side REST API.',
 			'singular' => false,
 			'autoload' => false,
@@ -25,6 +25,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	static public function getDefaultData() {
 		return array(
 			"formId" => "checkout-form",
+			"fundingMethods" => "",
 			"loadingHTML" => "",
 			"notificationHTML" => "",
 			"aboveHTML" => "",
@@ -139,6 +140,16 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 				size: '{$this->size}',
 				color: '{$this->color}',
 				shape: '{$this->shape}'
+			},
+
+			funding: {
+				disallowed: [ ";
+				foreach($this->fundingMethods as $method) {
+					$fundings = $method . ', ';
+					$out .= "{$fundings}";
+				}
+
+				$out .= "]
 			},
 
 			commit: true,
@@ -278,7 +289,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f = $modules->get('InputfieldRadios');
 		$f->name = 'size';
 		$f->label = __('Button Size');
-		$f->columnWidth = 33;
+		$f->columnWidth = 25;
 		$f->addOption('medium', __('Medium'));
 		$f->addOption('large', __('Large'));
 		$f->addOption('responsive', __('Responsive'));
@@ -288,7 +299,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f = $modules->get('InputfieldRadios');
 		$f->name = 'color';
 		$f->label = __('Button Color');
-		$f->columnWidth = 34;
+		$f->columnWidth = 25;
 		$f->addOption('gold', __('Gold'));
 		$f->addOption('blue', __('Blue'));
 		$f->addOption('silver', __('Silver'));
@@ -299,10 +310,21 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f = $modules->get('InputfieldRadios');
 		$f->name = 'shape';
 		$f->label = __('Button Shape');
-		$f->columnWidth = 33;
+		$f->columnWidth = 25;
 		$f->addOption('pill', __('Pill'));
 		$f->addOption('rect', __('Rect'));
 		$f->value = isset($data['shape']) ? $data['shape'] : 'rect';
+		$optionalFields->add($f);
+
+		$f = $modules->get('InputfieldCheckboxes');
+		$f->name = 'fundingMethods';
+		$f->label = __('Hide Funding Buttons');
+		$f->notes = __("PayPal Credit button is visible by default to US buyers only and ELV button to German buyers only.");
+		$f->columnWidth = 25;
+		$f->addOption('paypal.FUNDING.CREDIT', __('PayPal Credit'));
+		$f->addOption('paypal.FUNDING.CARD', __('Credit/Debit Cards'));
+		$f->addOption('paypal.FUNDING.ELV', __('ELV'));
+		$f->value = isset($data['fundingMethods']) ? $data['fundingMethods'] : '';
 		$optionalFields->add($f);
 
 		$f = $modules->get('InputfieldTextarea');
