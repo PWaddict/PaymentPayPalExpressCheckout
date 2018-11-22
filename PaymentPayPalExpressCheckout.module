@@ -12,7 +12,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'PayPal Checkout',
-			'version' => '1.2.3',
+			'version' => '1.2.4',
 			'summary' => 'PayPal Checkout module using the Client-Side REST API.',
 			'singular' => false,
 			'autoload' => false,
@@ -144,12 +144,14 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 
 			funding: {
 				disallowed: [ ";
+				$fundings = "";
 				foreach($this->fundingMethods as $method) {
-					$fundings = $method . ', ';
-					$out .= "{$fundings}";
+					$fundings .= $method . ', ';
 				}
 
-				$out .= "]
+				$out .= trim($fundings, ", ");
+
+				$out .= " ]
 			},
 
 			commit: true,

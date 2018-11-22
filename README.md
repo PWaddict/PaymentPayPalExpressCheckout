@@ -9,6 +9,10 @@ ProcessWire payment method for PayPal Checkout using the Client-Side REST API.
 
 ## Changelog
 
+### 1.2.4 (23 November 2018)
+
+- Updated code syntax on hiding Funding Buttons
+
 ### 1.2.3 (4 November 2018)
 
 - Added option to hide Funding Buttons (PayPal Credit, Credit/Debit Cards & ELV)
