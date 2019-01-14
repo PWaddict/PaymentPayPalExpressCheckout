@@ -12,7 +12,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'PayPal Checkout',
-			'version' => '1.2.4',
+			'version' => '1.2.5',
 			'summary' => 'PayPal Checkout module using the Client-Side REST API.',
 			'singular' => false,
 			'autoload' => false,
@@ -369,7 +369,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->attr('name+id', 'ajax');
 		$f->label = __('AJAX Checkout');
 		$f->description = __("IMPORTANT: Enable this option ONLY if your checkout process is already using AJAX in order to display the success page via AJAX too.");
-		$f->notes = __("IMPORTANT: You have to manually include the below PayPal Checkout script in your template's <head> or above </body> section: <script src='https://www.paypalobjects.com/api/checkout.min.js' async></script>");
+		$f->notes = __("IMPORTANT: You have to manually include the below PayPal Checkout script in your template's <head> or above &lt;/body&gt; section: &lt;script src='https://www.paypalobjects.com/api/checkout.min.js' async&gt;&lt;/script&gt;");
 		$f->columnWidth = 50;
 		$f->attr('checked', isset($data['ajax']) && $data['ajax'] ? 'checked' : '' );
 		$optionalFields->add($f);
