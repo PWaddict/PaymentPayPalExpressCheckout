@@ -169,11 +169,12 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 								item_list: {
 									items: [";
 									foreach($this->products as $p) {
-										$amount = $p->amount / 100;
+										$htmlEntities = ["&amp;", "&lt;", "&gt;", "&quot;", "&#039;"];
+										$htmlEntitiesReplacement = ["&", "<", ">", "\"", ""];
 										$out .= "{
-											name: '{$p->title}',
+											name: '" . str_replace($htmlEntities, $htmlEntitiesReplacement, htmlspecialchars_decode($p->title)) . "',
 											quantity: {$p->quantity},
-											price: '{$amount}',
+											price: '" . $p->amount / 100 . "',
 											currency: '" . ($this->data['currency' . $lang] ? $this->data['currency' . $lang] : $this->data['currency']) . "'
 										},";
 									}

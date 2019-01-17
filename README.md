@@ -9,6 +9,10 @@ ProcessWire payment method for PayPal Checkout using the Client-Side REST API.
 
 ## Changelog
 
+### 1.2.7 (17 January 2019)
+
+- Fixed product titles with HTML entities on PayPal's item list
+
 ### 1.2.6 (16 January 2019)
 
 - Removed fix from 1.2.5 version. Waiting for an official fix. More info [here](https://github.com/processwire/processwire-issues/issues/126).
