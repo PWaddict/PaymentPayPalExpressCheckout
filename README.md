@@ -9,6 +9,10 @@ ProcessWire payment method for PayPal Checkout using the Client-Side REST API.
 
 ## Changelog
 
+### 1.2.8 (19 March 2019)
+
+- Fixed decimal point on javascript code to prevent broken PayPal popup on alternate languages
+
 ### 1.2.7 (17 January 2019)
 
 - Fixed product titles with HTML entities on PayPal's item list

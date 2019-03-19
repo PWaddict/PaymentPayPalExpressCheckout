@@ -12,7 +12,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'PayPal Checkout',
-			'version' => '1.2.6',
+			'version' => '1.2.8',
 			'summary' => 'PayPal Checkout module using the Client-Side REST API.',
 			'singular' => false,
 			'autoload' => false,
@@ -163,7 +163,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 						transactions: [
 							{
 								amount: {
-									total: '{$this->calculateAmount()}',
+									total: '" . str_replace(',', '.', $this->calculateAmount()) . "',
 									currency: '" . ($this->data['currency' . $lang] ? $this->data['currency' . $lang] : $this->data['currency']) . "',
 								},
 								item_list: {
@@ -174,7 +174,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 										$out .= "{
 											name: '" . str_replace($htmlEntities, $htmlEntitiesReplacement, htmlspecialchars_decode($p->title)) . "',
 											quantity: {$p->quantity},
-											price: '" . $p->amount / 100 . "',
+											price: '" . str_replace(',', '.', $p->amount / 100 ) . "',
 											currency: '" . ($this->data['currency' . $lang] ? $this->data['currency' . $lang] : $this->data['currency']) . "'
 										},";
 									}
