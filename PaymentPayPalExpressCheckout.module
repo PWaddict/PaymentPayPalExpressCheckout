@@ -12,7 +12,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	public static function getModuleInfo() {
 		return array(
 			'title' => 'PayPal Checkout',
-			'version' => '1.2.8',
+			'version' => '2.0.0',
 			'summary' => 'PayPal Checkout module using the Client-Side REST API.',
 			'singular' => false,
 			'autoload' => false,
@@ -25,7 +25,6 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	static public function getDefaultData() {
 		return array(
 			"formId" => "checkout-form",
-			"fundingMethods" => "",
 			"loadingHTML" => "",
 			"notificationHTML" => "",
 			"aboveHTML" => "",
@@ -52,7 +51,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 	}
 
 	public function processPayment() {
-		if ($_POST['payment_state'] == 'approved') {
+		if ($_POST['payment_status'] == 'COMPLETED') {
 			return true;
 		}
 		return false;
@@ -70,8 +69,25 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 			$lang = '';
 		}
 
+		if ($this->data['enviroment'] == "sandbox") {
+			$clientID = $this->data['clientIdSandbox'];
+		} else {
+			$clientID = $this->data['clientIdLive'];
+		}
+
+		$fundings = "";
+		if ($this->fundingMethods) {
+
+			$fundings = array();
+			foreach ($this->fundingMethods as $method) {
+				array_push($fundings, $method);
+			}
+
+			$fundings = "&disable-funding=" . implode(',', $fundings);
+
+		}
+
 		if ($this->data['ajax']) {
-			$paypalScript = "";
 
 			$form = "";
 
@@ -86,11 +102,9 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 					}
 				};
 
-			xhr.send('payment_state=' + response.state + '');";
+			xhr.send('payment_status=' + response.status + '');";
 
-		}
-		else {
-			$paypalScript = "<script src='https://www.paypalobjects.com/api/checkout.min.js'></script>";
+		} else {
 
 			$form = "<form id='{$this->formId}' action='{$this->processUrl}' method='POST'></form>";
 
@@ -98,8 +112,8 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 
 			input = document.createElement('input');
 			input.setAttribute('type', 'hidden');
-			input.setAttribute('name', 'payment_state');
-			input.setAttribute('value', response.state);
+			input.setAttribute('name', 'payment_status');
+			input.setAttribute('value', response.status);
 
 			form.appendChild(input);
 			form.submit();";
@@ -107,7 +121,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		}
 
 		$out = "";
-		$out .= "{$paypalScript}
+		$out .= "
 
 		<div id='paypal-button-loading'>" . ($this->data['loadingHTML' . $lang] ? $this->data['loadingHTML' . $lang] : $this->data['loadingHTML']) . "</div>
 		<div id='paypal-button-above'>" . ($this->data['aboveHTML' . $lang] ? $this->data['aboveHTML' . $lang] : $this->data['aboveHTML']) . "</div>
@@ -124,74 +138,59 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		document.getElementById('paypal-button-notification').style.display = 'none';
 		document.getElementById('paypal-button-below').style.display = 'none';
 
-		paypal.Button.render({
+		function loadAsync(url, callback) {
+			var s = document.createElement('script');
+			s.setAttribute('src', url); s.onload = callback;
+			document.head.insertBefore(s, document.head.firstElementChild);
+		}
 
-			env: '{$this->enviroment}',
-
-			client: {
-				sandbox: '{$this->clientIdSandbox}',
-				production: '{$this->clientIdLive}'
-			},
-
-			locale: '" . ($this->data['locale' . $lang] ? $this->data['locale' . $lang] : $this->data['locale']) . "',
+		loadAsync('https://www.paypal.com/sdk/js?client-id={$clientID}&currency=" . ($this->data['currency' . $lang] ? $this->data['currency' . $lang] : $this->data['currency']) . "{$fundings}', function() {
+			paypal.Buttons({
 
 			style: {
 				layout: 'vertical',
-				size: '{$this->size}',
 				color: '{$this->color}',
 				shape: '{$this->shape}'
 			},
 
-			funding: {
-				disallowed: [ ";
-				$fundings = "";
-				foreach($this->fundingMethods as $method) {
-					$fundings .= $method . ', ';
-				}
+			createOrder: function(data, actions) {
 
-				$out .= trim($fundings, ", ");
-
-				$out .= " ]
-			},
-
-			commit: true,
-
-			payment: function(data, actions) {
-
-				return actions.payment.create({
-					payment: {
-						transactions: [
-							{
-								amount: {
-									total: '" . str_replace(',', '.', $this->calculateAmount()) . "',
-									currency: '" . ($this->data['currency' . $lang] ? $this->data['currency' . $lang] : $this->data['currency']) . "',
-								},
-								item_list: {
-									items: [";
-									foreach($this->products as $p) {
-										$htmlEntities = ["&amp;", "&lt;", "&gt;", "&quot;", "&#039;"];
-										$htmlEntitiesReplacement = ["&", "<", ">", "\"", ""];
-										$out .= "{
-											name: '" . str_replace($htmlEntities, $htmlEntitiesReplacement, htmlspecialchars_decode($p->title)) . "',
-											quantity: {$p->quantity},
-											price: '" . str_replace(',', '.', $p->amount / 100 ) . "',
-											currency: '" . ($this->data['currency' . $lang] ? $this->data['currency' . $lang] : $this->data['currency']) . "'
-										},";
-									}
-
-									$out .= "]
-								},
-								invoice_number: '{$this->id}'
+				return actions.order.create({
+					purchase_units: [{
+						amount: {
+							value: '" . str_replace(',', '.', $this->calculateAmount()) . "',
+							currency: '" . ($this->data['currency' . $lang] ? $this->data['currency' . $lang] : $this->data['currency']) . "',
+							breakdown: {
+								item_total: {
+									value: '" . str_replace(',', '.', $this->calculateAmount()) . "',
+									currency_code: '" . ($this->data['currency' . $lang] ? $this->data['currency' . $lang] : $this->data['currency']) . "'
+								}
 							}
-						]
-					}
+						},
+						invoice_id: '{$this->id}',
+						items: [";
+						foreach($this->products as $p) {
+							$htmlEntities = ["&amp;", "&lt;", "&gt;", "&quot;", "&#039;"];
+							$htmlEntitiesReplacement = ["&", "<", ">", "\"", ""];
+							$out .= "{
+								name: '" . str_replace($htmlEntities, $htmlEntitiesReplacement, htmlspecialchars_decode($p->title)) . "',
+								unit_amount: {
+									value: '" . str_replace(',', '.', $p->amount / 100 ) . "',
+									currency_code: '" . ($this->data['currency' . $lang] ? $this->data['currency' . $lang] : $this->data['currency']) . "'
+								},
+								quantity: {$p->quantity}
+							},";
+						}
+
+						$out .= "]
+					}]
 				});
 
 			},
 
-			onAuthorize: function(data, actions) {
+			onApprove: function(data, actions) {
 
-				return actions.payment.execute().then(function(response) {
+				return actions.order.capture().then(function(response) {
 
 					document.getElementById('paypal-button-above').style.display = 'none';
 					document.getElementById('paypal-button-container').style.display = 'none';
@@ -204,14 +203,17 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 
 			},
 
-			onEnter: function() {
+			onInit: function() {
+
 				document.getElementById('paypal-button-loading').style.display = 'none';
 				document.getElementById('paypal-button-above').style.display = 'block';
 				document.getElementById('paypal-button-container').style.display = 'block';
 				document.getElementById('paypal-button-below').style.display = 'block';
+
 			}
 
-		}, '#paypal-button-container');
+		}).render('#paypal-button-container');
+		});
 		</script>";
 
 		return $out;
@@ -229,8 +231,9 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->name = 'formId';
 		$f->label = __("Form ID");
 		$f->description = __("ID attached to dynamically generated form element.");
+		$f->notes = __("E.g. checkout-form");
 		$f->required = 1;
-		$f->columnWidth = 33;
+		$f->columnWidth = 50;
 		if(isset($data['formId'])) $f->value = $data['formId'];
 		$requiredFields->add($f);
 
@@ -238,22 +241,11 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->name = 'currency';
 		$f->label = __("Currency");
 		$f->description = __("Add the currency code for the transactions.");
-		$f->notes = __("E.g. USD or EUR etc. All supported codes are listed [here](https://developer.paypal.com/docs/classic/api/currency_codes/).");
+		$f->notes = __("E.g. USD or EUR etc. All supported codes are listed [here](https://developer.paypal.com/docs/checkout/reference/customize-sdk/#currency).");
 		$f->required = 1;
-		$f->columnWidth = 34;
+		$f->columnWidth = 50;
 		$f->useLanguages = true;
 		if(isset($data['currency'])) $f->value = $data['currency'];
-		$requiredFields->add($f);
-
-		$f = $modules->get('InputfieldText');
-		$f->name = 'locale';
-		$f->label = __("Locale");
-		$f->required = 1;
-		$f->columnWidth = 33;
-		$f->description = __("Localize the checkout flow.");
-		$f->notes = __("E.g. en_US or en_GB or es_ES etc. All supported codes are listed [here](https://developer.paypal.com/docs/classic/api/locale_codes/).");
-		$f->useLanguages = true;
-		if(isset($data['locale'])) $f->value = $data['locale'];
 		$requiredFields->add($f);
 
 		$f = $modules->get('InputfieldRadios');
@@ -290,22 +282,13 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$optionalFields->label = __('Optional Fields');
 
 		$f = $modules->get('InputfieldRadios');
-		$f->name = 'size';
-		$f->label = __('Button Size');
-		$f->columnWidth = 25;
-		$f->addOption('medium', __('Medium'));
-		$f->addOption('large', __('Large'));
-		$f->addOption('responsive', __('Responsive'));
-		$f->value = isset($data['size']) ? $data['size'] : 'responsive';
-		$optionalFields->add($f);
-
-		$f = $modules->get('InputfieldRadios');
 		$f->name = 'color';
 		$f->label = __('Button Color');
-		$f->columnWidth = 25;
+		$f->columnWidth = 33;
 		$f->addOption('gold', __('Gold'));
 		$f->addOption('blue', __('Blue'));
 		$f->addOption('silver', __('Silver'));
+		$f->addOption('white', __('White'));
 		$f->addOption('black', __('Black'));
 		$f->value = isset($data['color']) ? $data['color'] : 'gold';
 		$optionalFields->add($f);
@@ -313,21 +296,31 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f = $modules->get('InputfieldRadios');
 		$f->name = 'shape';
 		$f->label = __('Button Shape');
-		$f->columnWidth = 25;
-		$f->addOption('pill', __('Pill'));
+		$f->columnWidth = 33;
 		$f->addOption('rect', __('Rect'));
+		$f->addOption('pill', __('Pill'));
 		$f->value = isset($data['shape']) ? $data['shape'] : 'rect';
 		$optionalFields->add($f);
 
 		$f = $modules->get('InputfieldCheckboxes');
 		$f->name = 'fundingMethods';
 		$f->label = __('Hide Funding Buttons');
-		$f->notes = __("PayPal Credit button is visible by default to US buyers only and ELV button to German buyers only.");
-		$f->columnWidth = 25;
-		$f->addOption('paypal.FUNDING.CREDIT', __('PayPal Credit'));
-		$f->addOption('paypal.FUNDING.CARD', __('Credit/Debit Cards'));
-		$f->addOption('paypal.FUNDING.ELV', __('ELV'));
-		$f->value = isset($data['fundingMethods']) ? $data['fundingMethods'] : '';
+		$f->notes = __('**IMPORTANT**: Real money gaming merchants and/or non-US merchants who do not have the correct licenses and approvals to display the Credit button should disable "PayPal Credit" funding button.');
+		$f->columnWidth = 33;
+		$f->addOption('card', __('Debit or Credit Cards'));
+		$f->addOption('credit', __('PayPal Credit'));
+		$f->addOption('bancontact', __('Bancontact'));
+		$f->addOption('blik', __('BLIK'));
+		$f->addOption('eps', __('eps'));
+		$f->addOption('giropay', __('giropay'));
+		$f->addOption('ideal', __('iDEAL'));
+		$f->addOption('mercadopago', __('Mercado Pago'));
+		$f->addOption('mybank', __('MyBank'));
+		$f->addOption('p24', __('Przelewy24'));
+		$f->addOption('sepa', __('SEPA-Lastschrift'));
+		$f->addOption('sofort', __('Sofort'));
+		$f->addOption('venmo', __('Venmo'));
+		$f->value = isset($data['fundingMethods']) ? $data['fundingMethods'] : 'credit';
 		$optionalFields->add($f);
 
 		$f = $modules->get('InputfieldTextarea');
@@ -369,8 +362,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f = $modules->get('InputfieldCheckbox');
 		$f->attr('name+id', 'ajax');
 		$f->label = __('AJAX Checkout');
-		$f->description = __("IMPORTANT: Enable this option ONLY if your checkout process is already using AJAX in order to display the success page via AJAX too.");
-		$f->notes = __("IMPORTANT: You have to manually include the below PayPal Checkout script in your template's <head> or above </body> section: <script src='https://www.paypalobjects.com/api/checkout.min.js' async></script>");
+		$f->notes = __("**IMPORTANT**: Enable this option ONLY if your checkout process is already using AJAX in order to display the success page via AJAX too.");
 		$f->columnWidth = 50;
 		$f->attr('checked', isset($data['ajax']) && $data['ajax'] ? 'checked' : '' );
 		$optionalFields->add($f);
@@ -379,6 +371,7 @@ class PaymentPayPalExpressCheckout extends PaymentModule {
 		$f->name = 'ajaxId';
 		$f->label = __("AJAX Checkout Div ID");
 		$f->description = __("Add your div ID you're using to output the AJAX checkout content.");
+		$f->notes = __("E.g. checkout-ajax");
 		$f->showIf = "ajax=1";
 		$f->required = 1;
 		$f->columnWidth = 50;

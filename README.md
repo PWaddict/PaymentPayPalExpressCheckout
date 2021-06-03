@@ -1,6 +1,24 @@
 # PayPal Checkout (Client-Side REST API) Module for ProcessWire 3.x
 
-ProcessWire payment method for PayPal Checkout using the Client-Side REST API.
+ProcessWire payment method for PayPal Checkout using the Client-Side REST API with Smart Payment Buttons and PayPal JavaScript SDK.
+
+## Install
+
+1. Copy all files included in this module into new directory `/site/modules/PaymentPayPalExpressCheckout/`.
+2. In the ProcessWire admin, go to Modules > Refresh.
+3. Click install for the PayPal Checkout module.
+4. Configure the required module fields.
+
+## CSS Style on PayPal Button Container
+
+To change the width of the container and/or if you're using dark theme on your website and you haven't disable the "Debit or Credit Cards" button you will definitely need to style the PayPal Button Container otherwise some elements (grey text & icon) might not be clearly visible.
+~~~~~
+#paypal-button-container {
+  background: white;
+  max-width: 500px;
+  padding: 25px;
+}
+~~~~~
 
 ## Requirements
 
@@ -8,6 +26,13 @@ ProcessWire payment method for PayPal Checkout using the Client-Side REST API.
 - [PaymentModule](https://github.com/apeisa/PaymentModule/tree/PW3) (PW3 branch) ProcessWire module
 
 ## Changelog
+
+### 2.0.0 (3 June 2021)
+
+- Module upgraded with the current PayPal API
+- Added Smart Payment Buttons and PayPal JavaScript SDK
+- PayPal JavaScript SDK will automatically loaded even if AJAX enabled
+IMPORTANT: If you were previously using AJAX, remove the old checkout.min.js from your templates
 
 ### 1.2.8 (19 March 2019)
 
