@@ -27,6 +27,10 @@ To change the width of the container and/or if you're using dark theme on your w
 
 ## Changelog
 
+### 2.0.2 (11 May 2022)
+
+- Improved payment validation
+
 ### 2.0.1 (10 November 2021)
 
 - Added field for additional custom JavaScript (onApprove) on AJAX Checkout
